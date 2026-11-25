@@ -1,0 +1,62 @@
+{
+	"realm": "tcg-card-stack",
+	"enabled": true,
+	"registrationAllowed": true,
+	"loginWithEmailAllowed": true,
+	"duplicateEmailsAllowed": false,
+	"resetPasswordAllowed": false,
+	"editUsernameAllowed": false,
+	"roles": {
+		"realm": [
+			{
+				"name": "collector",
+				"description": "Standard role for card collectors"
+			}
+		]
+	},
+	"clients": [
+		{
+			"clientId": "tcg-backend",
+			"name": "TCG Card Stack Backend Client",
+			"enabled": true,
+			"publicClient": true,
+			"standardFlowEnabled": true,
+			"directAccessGrantsEnabled": true,
+			"protocol": "openid-connect",
+			"rootUrl": "http://localhost:3000",
+			"baseUrl": "http://localhost:3000",
+			"redirectUris": [
+				"http://localhost:3000/*",
+				"http://localhost:5173/*",
+				"http://localhost:8080/*"
+			],
+			"webOrigins": [
+				"+"
+			],
+			"attributes": {
+				"pkce.code.challenge.method": "S256"
+			}
+		}
+	],
+	"users": [
+		{
+			"id": "004dd70a-0aa1-4402-b1da-74e4311360f5",
+			"username": "collector",
+			"email": "collector@tcg-card-stack.local",
+			"emailVerified": true,
+			"enabled": true,
+			"firstName": "Ash",
+			"lastName": "Collector",
+			"credentials": [
+				{
+					"type": "password",
+					"value": "collector",
+					"temporary": false
+				}
+			],
+			"realmRoles": [
+				"collector"
+			]
+		}
+	]
+}

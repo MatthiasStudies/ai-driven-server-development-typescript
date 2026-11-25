@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: tcg_postgres
+    restart: no  
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-tcg_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tcg_password}
+      POSTGRES_DB: ${POSTGRES_DB:-tcg_tracker}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./postgres-data/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tcg_user -d tcg_tracker"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: tcg_keycloak
+    restart: no
+    command:
+      - start-dev
+      - --import-realm
+    environment:
+      # Database connection (uses the second DB created in init.sql)
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: tcg_user
+      KC_DB_PASSWORD: tcg_password
+
+      # Bootstrap Admin Credentials (Keycloak 26+ variables)
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+
+      # Dev HTTP settings
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME_STRICT: "false"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
