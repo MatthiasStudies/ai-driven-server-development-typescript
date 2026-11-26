@@ -1,10 +1,18 @@
 import { serve } from "@hono/node-server";
 import { createServer as createHttp2Server } from "node:http2";
 import { createApp } from "./app.js";
+import { db, pool } from "./db/client.js";
 import { getEnv } from "./env.js";
 
 const env = getEnv();
-const app = createApp();
+const app = createApp({
+  database: db,
+  auth: {
+    issuer: env.KEYCLOAK_ISSUER,
+    jwksUrl: env.KEYCLOAK_JWKS_URL,
+    audience: env.KEYCLOAK_AUDIENCE,
+  },
+});
 
 const http1Server = serve(
   {
@@ -40,9 +48,13 @@ function shutdown() {
       server.close(() => resolve());
     });
 
-  void Promise.all([closeServer(http1Server), closeServer(http2Server)]).finally(() => {
-    process.exit(0);
-  });
+  void Promise.all([closeServer(http1Server), closeServer(http2Server)])
+    .then(() => pool.end())
+    .then(() => process.exit(0))
+    .catch((error: unknown) => {
+      console.error("Shutdown failed:", error);
+      process.exit(1);
+    });
 
   setTimeout(() => process.exit(0), 5_000).unref();
 }
