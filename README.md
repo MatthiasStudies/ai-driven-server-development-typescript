@@ -2,6 +2,25 @@
 
 A TypeScript/Hono API for trading card binders, cards, and grading certificates, using PostgreSQL, Drizzle ORM and Keycloak. See `PLAN.md` for the implementation plan.
 
+## Quick demonstration
+
+Requires Node.js 24+, pnpm, Docker Compose, and Bruno. From the project directory, run:
+
+```sh
+make install
+make env
+make up
+make dev
+```
+
+Wait for Keycloak to finish starting, then open `bruno/` in Bruno and select the `local` environment. Run these requests in order:
+
+1. **Health (public)**, then **Auth / Get Token** and **Binders / List binders** to view the collection.
+2. **Auth / Get noncollector token**, then **Errors / Missing collector role (403)** to demonstrate role protection.
+3. **Auth / Get second collector token**, then **Ownership / Create second collector binder**. Run the two following ownership requests: the owner gets `200`, while the original collector gets `404`. The create request persists a binder.
+
+For existing database volumes, see [Existing volumes and realm imports](#existing-volumes-and-realm-imports) if the demo users are missing. Keep tokens out of commits.
+
 ## Local setup
 
 Requirements: Node.js 24 or newer, the pnpm version pinned in `package.json`, Docker Compose, and optionally [Bruno](https://www.usebruno.com/) for HTTP requests.
