@@ -77,6 +77,8 @@
 			"email": "collector2@tcg-card-stack.local",
 			"emailVerified": true,
 			"enabled": true,
+			"firstName": "Misty",
+			"lastName": "Collector",
 			"credentials": [
 				{
 					"type": "password",
@@ -94,6 +96,8 @@
 			"email": "noncollector@tcg-card-stack.local",
 			"emailVerified": true,
 			"enabled": true,
+			"firstName": "Brock",
+			"lastName": "Viewer",
 			"credentials": [
 				{
 					"type": "password",
