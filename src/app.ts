@@ -4,6 +4,7 @@ import { ProblemError, problemFromError, problemResponse } from "./http/problem.
 import type { Database } from "./repositories/binders.js";
 import { createBinderRoutes } from "./routes/binders.js";
 import { createCardRoutes } from "./routes/cards.js";
+import { createGradingCertificateRoutes } from "./routes/grading-certificates.js";
 import { healthRoutes } from "./routes/health.js";
 
 export interface AppOptions {
@@ -20,6 +21,7 @@ export function createApp({ database, auth }: AppOptions) {
   app.use("/cards/*", authenticate);
   app.route("/", createBinderRoutes(database));
   app.route("/", createCardRoutes(database));
+  app.route("/", createGradingCertificateRoutes(database));
 
   app.notFound((c) => problemResponse(c, 404, "Not Found", "The requested resource was not found"));
 
