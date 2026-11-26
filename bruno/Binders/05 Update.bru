@@ -1,0 +1,33 @@
+meta {
+  name: Replace binder (If-Match)
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{baseUrl}}/binders/{{binderId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{access_token}}
+  Content-Type: application/json
+  If-Match: {{binderEtag}}
+}
+
+body:json {
+  {
+    "name": "Bruno sample binder updated",
+    "description": "Full replacement from Bruno"
+  }
+}
+
+script:post-response {
+  const etag = res.getHeader("etag");
+  if (res.getStatus() === 200 && etag) bru.setEnvVar("binderEtag", etag);
+}
+
+docs {
+  Modifies data. Fetch the same binder first; after a successful update fetch again if no ETag was returned.
+}

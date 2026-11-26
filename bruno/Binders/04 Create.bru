@@ -1,0 +1,39 @@
+meta {
+  name: Create binder
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/binders
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{access_token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "Bruno sample binder",
+    "description": "Created using the local collection"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 201) {
+    const location = res.getHeader("location") || "";
+    const match = location.match(/\/binders\/(\d+)\/?$/);
+    const etag = res.getHeader("etag");
+    if (match) {
+      bru.setEnvVar("binderId", match[1]);
+      bru.setEnvVar("binderEtag", etag || "");
+    }
+  }
+}
+
+docs {
+  Creates data. On success, captures the ID from Location and the ETag when present. Run Get binder if no ETag was returned.
+}

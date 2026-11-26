@@ -1,0 +1,19 @@
+meta {
+  name: List and filter cards
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/cards?page=1&pageSize=20&sort=-name&filter.rarity.in=Holo%20Rare,Ultra%20Rare&filter.acquiredAt.gte=2021-01-01
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{access_token}}
+}
+
+docs {
+  More examples: filter.name.contains=char, filter.setName.eq=Base Set, filter.variant.ne=Standard, filter.acquiredAt.lte=2024-12-31, filter.binderId.in=1,2. Operators are field-specific.
+}

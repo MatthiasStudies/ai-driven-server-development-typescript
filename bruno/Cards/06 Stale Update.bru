@@ -1,0 +1,33 @@
+meta {
+  name: Stale card update (412)
+  type: http
+  seq: 6
+}
+
+put {
+  url: {{baseUrl}}/cards/{{cardId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{access_token}}
+  Content-Type: application/json
+  If-Match: "deliberately-stale-etag"
+}
+
+body:json {
+  {
+    "binderId": {{binderId}},
+    "name": "Stale card update",
+    "setName": "Example Set",
+    "collectorNumber": "1/100",
+    "rarity": "Rare",
+    "variant": "Standard",
+    "acquiredAt": "2024-01-01"
+  }
+}
+
+docs {
+  Expects 412 for an existing owned card and target binder. The supplied ETag is deliberately different from the server's current ETag.
+}

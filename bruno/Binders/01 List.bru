@@ -1,0 +1,19 @@
+meta {
+  name: List binders
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/binders?page=1&pageSize=20&sort=-createdAt&filter.name.contains=Binder
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{access_token}}
+}
+
+docs {
+  Examples: filter.name.eq=Trade Binder, filter.name.ne=Other, filter.createdAt.gte=2024-01-01T00:00:00Z. Allowed operators depend on the field.
+}

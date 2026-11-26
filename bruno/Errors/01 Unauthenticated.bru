@@ -1,0 +1,15 @@
+meta {
+  name: Missing token (401)
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/binders
+  body: none
+  auth: none
+}
+
+docs {
+  Expected: 401 Problem Details without a bearer token.
+}

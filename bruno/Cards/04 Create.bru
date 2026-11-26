@@ -1,0 +1,44 @@
+meta {
+  name: Create card
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/cards
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{access_token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "binderId": {{binderId}},
+    "name": "Bruno sample card",
+    "setName": "Example Set",
+    "collectorNumber": "1/100",
+    "rarity": "Rare",
+    "variant": "Standard",
+    "acquiredAt": "2024-01-01"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 201) {
+    const location = res.getHeader("location") || "";
+    const match = location.match(/\/cards\/(\d+)\/?$/);
+    const etag = res.getHeader("etag");
+    if (match) {
+      bru.setEnvVar("cardId", match[1]);
+      bru.setEnvVar("cardEtag", etag || "");
+    }
+  }
+}
+
+docs {
+  Creates data in the selected owned binder. Captures ID from Location and ETag when present; run Get card if no ETag was returned.
+}

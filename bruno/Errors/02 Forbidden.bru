@@ -1,0 +1,19 @@
+meta {
+  name: Missing collector role (403)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/binders
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{noRoleToken}}
+}
+
+docs {
+  Set noRoleToken to a valid token issued by this realm for a user without the collector role. No such user is seeded. A missing, expired, or invalid token returns 401 instead.
+}
