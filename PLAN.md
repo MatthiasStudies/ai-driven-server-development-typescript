@@ -22,7 +22,7 @@ during planning (including the port and filter-op decisions).
 | Topic | Decision |
 |---|---|
 | Port | **3000** (esdb stopped) |
-| Stack | Hono + `@hono/node-server`, **h2c HTTP/2** via `node:http2` (`allowHTTP1: true`, plain `createServer`) — HTTP/1.1 clients (Bruno, curl) still work; HTTP/2 via `curl --http2-prior-knowledge` |
+| Stack | Hono + `@hono/node-server`: HTTP/1.1 on port 3000 for Bruno and cleartext HTTP/2 (h2c prior knowledge) on port 3001; the same app serves both. Node's cleartext HTTP/2 server does not support HTTP/1.1 fallback. |
 | Schema changes | **Approved**: add `created_at`/`updated_at` to `cards` and `grading_certificates`, `updated_at` to `binders`. Update `init.sql` + Drizzle schema; recreate DB via `docker compose down -v && up -d` (destroys/reseeds data — approved) |
 | Timestamps | Drizzle `defaultNow()` for `created_at`; `updated_at` via `$onUpdate(() => new Date())` (all writes go through Drizzle; init.sql gets `DEFAULT now()` too) |
 | Authorization | Keycloak JWT (JWKS from `…/realms/tcg-card-stack/protocol/openid-connect/certs`, issuer check), realm role `collector` required on all API routes; `/health` public |
@@ -147,7 +147,7 @@ Apply with `docker compose down -v && docker compose up -d --wait` (recreates + 
 
 ## 12. Docs & config updates
 
-- README: current status, setup (incl. `docker compose` recreate for schema change), run/dev, HTTP/2 note (`curl --http2-prior-knowledge http://localhost:3000/health`), auth flow + how to get a token, ETag/If-Match semantics, query syntax examples, Bruno usage, testing notes (no live-DB tests), ports (3000 API, 5432 PG, 8080 Keycloak)
+- README: current status, setup (incl. `docker compose` recreate for schema change), run/dev, HTTP/2 note (`curl --http2-prior-knowledge http://localhost:3001/health`), auth flow + how to get a token, ETag/If-Match semantics, query syntax examples, Bruno usage, testing notes (no live-DB tests), ports (3000 API, 5432 PG, 8080 Keycloak)
 - `.env.example`: add `PORT=3000`, `KEYCLOAK_ISSUER=http://localhost:8080/realms/tcg-card-stack`, `KEYCLOAK_JWKS_URL=…`; update `.env` likewise (gitignored)
 - `.oxlintrc.json` / `.oxfmtrc.json`: keep as-is unless they conflict
 - tsconfig: no changes expected; `src/index.ts` included in build
@@ -169,5 +169,5 @@ Apply with `docker compose down -v && docker compose up -d --wait` (recreates + 
 ## 14. Risks / notes
 
 - Recreating the DB destroys seed data changes made since last reset (approved; it re-seeds from init.sql)
-- Bruno cannot easily do HTTP/2 h2c; requests will use HTTP/1.1 against the same port (server supports both) — fine for verification
-- h2c requires clients to opt into the upgrade; plain `curl --http1.1` works via `allowHTTP1`
+- Bruno requests use HTTP/1.1 on port 3000; use an HTTP/2 prior-knowledge client on port 3001. No h2c HTTP/1.1 upgrade is provided.
+- Previously proposed single-port `allowHTTP1` fallback applies to TLS servers, not Node's cleartext HTTP/2 server.

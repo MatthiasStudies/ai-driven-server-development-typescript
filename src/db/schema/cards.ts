@@ -13,7 +13,9 @@ export const cards = pgTable("cards", {
   rarity: varchar("rarity", { length: 50 }).notNull(),
   variant: varchar("variant", { length: 50 }).default("Standard"),
   acquiredAt: date("acquired_at").default(sql`CURRENT_DATE`),
-  createdAt: timestamp("created_at", { withTimezone: true }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .$onUpdate(() => new Date())
