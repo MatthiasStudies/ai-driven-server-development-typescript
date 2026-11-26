@@ -1,0 +1,19 @@
+meta {
+  name: Original collector reads other binder (404)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/binders/{{secondBinderId}}
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{access_token}}
+}
+
+docs {
+  Run both collector token requests and Create second collector binder first. The original collector should receive 404 for the other owner's binder.
+}

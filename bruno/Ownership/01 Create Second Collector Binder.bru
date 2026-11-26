@@ -1,0 +1,34 @@
+meta {
+  name: Create second collector binder
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/binders
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{secondCollectorToken}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "Second collector binder",
+    "description": "Ownership demonstration"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 201) {
+    const match = (res.getHeader("location") || "").match(/\/binders\/(\d+)\/?$/);
+    if (match) bru.setEnvVar("secondBinderId", match[1]);
+  }
+}
+
+docs {
+  Creates persistent data owned by collector2. Run Auth / Get second collector token first; captures the ID for the following requests.
+}

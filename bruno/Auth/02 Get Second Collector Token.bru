@@ -1,0 +1,28 @@
+meta {
+  name: Get second collector token
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{keycloakUrl}}/realms/tcg-card-stack/protocol/openid-connect/token
+  body: formUrlEncoded
+  auth: none
+}
+
+body:form-urlencoded {
+  grant_type: password
+  client_id: tcg-backend
+  username: collector2
+  password: collector2
+}
+
+script:post-response {
+  if (res.getStatus() === 200 && res.getBody().access_token) {
+    bru.setEnvVar("secondCollectorToken", res.getBody().access_token);
+  }
+}
+
+docs {
+  Development credentials only. Stores a separate token without replacing the original collector token.
+}

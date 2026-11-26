@@ -1,0 +1,28 @@
+meta {
+  name: Get noncollector token
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{keycloakUrl}}/realms/tcg-card-stack/protocol/openid-connect/token
+  body: formUrlEncoded
+  auth: none
+}
+
+body:form-urlencoded {
+  grant_type: password
+  client_id: tcg-backend
+  username: noncollector
+  password: noncollector
+}
+
+script:post-response {
+  if (res.getStatus() === 200 && res.getBody().access_token) {
+    bru.setEnvVar("noRoleToken", res.getBody().access_token);
+  }
+}
+
+docs {
+  Development credentials only. Uses the same audience-mapped client as the collectors. Stores noRoleToken for the 403 example.
+}

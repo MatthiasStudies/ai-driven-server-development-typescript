@@ -15,5 +15,5 @@ headers {
 }
 
 docs {
-  Set noRoleToken to a valid token issued by this realm for a user without the collector role. No such user is seeded. A missing, expired, or invalid token returns 401 instead.
+  Run Auth / Get noncollector token first. A missing, expired, invalid, or wrong-audience token returns 401 instead.
 }
