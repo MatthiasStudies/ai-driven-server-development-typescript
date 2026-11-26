@@ -70,6 +70,37 @@
 			"realmRoles": [
 				"collector"
 			]
+		},
+		{
+			"id": "5a335eb8-7e17-42fd-8c95-148d53067d20",
+			"username": "collector2",
+			"email": "collector2@tcg-card-stack.local",
+			"emailVerified": true,
+			"enabled": true,
+			"credentials": [
+				{
+					"type": "password",
+					"value": "collector2",
+					"temporary": false
+				}
+			],
+			"realmRoles": [
+				"collector"
+			]
+		},
+		{
+			"id": "9f795fe5-14e7-4dbf-a6b5-bf35d290a564",
+			"username": "noncollector",
+			"email": "noncollector@tcg-card-stack.local",
+			"emailVerified": true,
+			"enabled": true,
+			"credentials": [
+				{
+					"type": "password",
+					"value": "noncollector",
+					"temporary": false
+				}
+			]
 		}
 	]
 }
