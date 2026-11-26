@@ -19,31 +19,31 @@ during planning (including the port and filter-op decisions).
 
 ## 2. Locked-in decisions
 
-| Topic | Decision |
-|---|---|
-| Port | **3000** (esdb stopped) |
-| Stack | Hono + `@hono/node-server`: HTTP/1.1 on port 3000 for Bruno and cleartext HTTP/2 (h2c prior knowledge) on port 3001; the same app serves both. Node's cleartext HTTP/2 server does not support HTTP/1.1 fallback. |
-| Schema changes | **Approved**: add `created_at`/`updated_at` to `cards` and `grading_certificates`, `updated_at` to `binders`. Update `init.sql` + Drizzle schema; recreate DB via `docker compose down -v && up -d` (destroys/reseeds data — approved) |
-| Timestamps | Drizzle `defaultNow()` for `created_at`; `updated_at` via `$onUpdate(() => new Date())` (all writes go through Drizzle; init.sql gets `DEFAULT now()` too) |
-| Authorization | Keycloak JWT (JWKS from `…/realms/tcg-card-stack/protocol/openid-connect/certs`, issuer check), realm role `collector` required on all API routes; `/health` public |
-| Ownership | Enforced: binders filtered/limited to `owner_user_id = sub`; cards scoped via their binder (join); creating a binder stamps `owner_user_id = sub`; card writes require owning the target binder |
-| Endpoints | `GET/POST /binders`, `GET/PUT /binders/:id`, `GET/POST /cards`, `GET/PUT /cards/:id`, `POST /cards/:cardId/grading-certificate`, `GET /health` |
-| HTTP semantics | Conditional GET (`If-None-Match` → 304); POST → `201` + `Location`; PUT requires `If-Match` (optimistic locking via `version`) |
-| ETag | Strong ETag `"<resource>-<id>-v<version>"` e.g. `"card-3-v7"`; flips on every successful PUT |
-| PUT semantics | Full replacement (all fields required); `If-Match` mismatch → 412; missing id → 404 |
-| Pagination | `?page=1&pageSize=20` (max 100); response envelope `{ data: [...], meta: { page, pageSize, total, totalPages } }` |
-| Sorting | `sort=-name,createdAt` (whitelisted fields per resource, `-` = desc) |
-| Filtering | `filter.<field>.<op>=value`, ops: `eq`, `ne`, `in` (comma-separated), `contains` (case-insensitive ILIKE), `gte`, `lte`; all zod-validated |
-| Certificates | One per card (DB UNIQUE); second POST → `409`; duplicate `cert_number` → `409`; no update/delete endpoint |
-| Errors | RFC 9457 `application/problem+json` for all error paths; zod failures → 400 with `errors` array |
-| Tests | Vitest **unit tests only** — no live-DB tests (user choice). Bruno collection is the HTTP-level verification (spec allows either; Bruno explicitly requested) |
-| PUT `If-Match` | Required; format matches the ETag string emitted by GETs |
-| Bruno | `bruno/` collection committed; token via "Get Token" request (password grant) with post-response script storing `access_token` in environment |
-| Commits | **"Commit early, commit often"** — small, self-contained commits after every working step (not just per numbered phase; e.g. schema change, then server skeleton, then each route module, then tests, then docs). Never leave a green build uncommitted; commit messages in conventional style (`feat:`, `chore:`, `test:`, `docs:`) |
+| Topic          | Decision                                                                                                                                                                                                                                                                                                                             |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Port           | **3000** (esdb stopped)                                                                                                                                                                                                                                                                                                              |
+| Stack          | Hono + `@hono/node-server`: HTTP/1.1 on port 3000 for Bruno and cleartext HTTP/2 (h2c prior knowledge) on port 3001; the same app serves both. Node's cleartext HTTP/2 server does not support HTTP/1.1 fallback.                                                                                                                    |
+| Schema changes | **Approved**: add `created_at`/`updated_at` to `cards` and `grading_certificates`, `updated_at` to `binders`. Update `init.sql` + Drizzle schema; recreate DB via `docker compose down -v && up -d` (destroys/reseeds data — approved)                                                                                               |
+| Timestamps     | Drizzle `defaultNow()` for `created_at`; `updated_at` via `$onUpdate(() => new Date())` (all writes go through Drizzle; init.sql gets `DEFAULT now()` too)                                                                                                                                                                           |
+| Authorization  | Keycloak JWT (JWKS from `…/realms/tcg-card-stack/protocol/openid-connect/certs`, issuer check), realm role `collector` required on all API routes; `/health` public                                                                                                                                                                  |
+| Ownership      | Enforced: binders filtered/limited to `owner_user_id = sub`; cards scoped via their binder (join); creating a binder stamps `owner_user_id = sub`; card writes require owning the target binder                                                                                                                                      |
+| Endpoints      | `GET/POST /binders`, `GET/PUT /binders/:id`, `GET/POST /cards`, `GET/PUT /cards/:id`, `POST /cards/:cardId/grading-certificate`, `GET /health`                                                                                                                                                                                       |
+| HTTP semantics | Conditional GET (`If-None-Match` → 304); POST → `201` + `Location`; PUT requires `If-Match` (optimistic locking via `version`)                                                                                                                                                                                                       |
+| ETag           | Strong, opaque hash of each complete JSON representation, including nested certificates and list metadata; PUT also uses the stored row version for atomic updates.                                                                                                                                                                  |
+| PUT semantics  | Full replacement (all fields required); `If-Match` mismatch → 412; missing id → 404                                                                                                                                                                                                                                                  |
+| Pagination     | `?page=1&pageSize=20` (max 100); response envelope `{ data: [...], meta: { page, pageSize, total, totalPages } }`                                                                                                                                                                                                                    |
+| Sorting        | `sort=-name,createdAt` (whitelisted fields per resource, `-` = desc)                                                                                                                                                                                                                                                                 |
+| Filtering      | `filter.<field>.<op>=value`, ops: `eq`, `ne`, `in` (comma-separated), `contains` (case-insensitive ILIKE), `gte`, `lte`; all zod-validated                                                                                                                                                                                           |
+| Certificates   | One per card (DB UNIQUE); second POST → `409`; duplicate `cert_number` → `409`; no update/delete endpoint                                                                                                                                                                                                                            |
+| Errors         | RFC 9457 `application/problem+json` for all error paths; zod failures → 400 with `errors` array                                                                                                                                                                                                                                      |
+| Tests          | Vitest **unit tests only** — no live-DB tests (user choice). Bruno collection is the HTTP-level verification (spec allows either; Bruno explicitly requested)                                                                                                                                                                        |
+| PUT `If-Match` | Required; format matches the ETag string emitted by GETs                                                                                                                                                                                                                                                                             |
+| Bruno          | `bruno/` collection committed; token via "Get Token" request (password grant) with post-response script storing `access_token` in environment                                                                                                                                                                                        |
+| Commits        | **"Commit early, commit often"** — small, self-contained commits after every working step (not just per numbered phase; e.g. schema change, then server skeleton, then each route module, then tests, then docs). Never leave a green build uncommitted; commit messages in conventional style (`feat:`, `chore:`, `test:`, `docs:`) |
 
 ## 3. Dependencies to add
 
-Runtime: `hono`, `@hono/node-server`, `zod`, `@hono/zod-validator`, `jose`.
+Runtime: `hono`, `@hono/node-server`, `zod`, `jose`.
 Dev: `vitest`.
 (No Drizzle migrations — `init.sql` remains source of truth.)
 
@@ -83,18 +83,19 @@ Makefile
 
 Root-level (no `/api` prefix): `/health`, `/binders`, `/cards`, `/cards/:cardId/grading-certificate`.
 
-| Endpoint | Behavior |
-|---|---|
-| `GET /health` | `{ status: "ok" }` — public, no auth |
-| `POST /binders` | zod body `{ name (≤100), description? }`; stamps `owner_user_id = sub`; `201` + `Location: /binders/:id` + `ETag` |
-| `GET /binders` | owner-scoped list; filters e.g. `filter.name.contains\|eq\|ne`, `filter.createdAt.gte\|lte`; `sort` whitelist: `name, createdAt, updatedAt`; paginated envelope + `ETag`; `If-None-Match` → 304 |
-| `GET /binders/:id` | owner-scoped detail; embeds `cards` summary (1:N) |
-| `PUT /binders/:id` | full replace `{ name, description? }`; requires `If-Match`; `UPDATE … WHERE id=? AND version=?` (`version+1`, `updated_at=now()`); 404 if missing, 412 on mismatch |
-| `POST /cards` | body `{ binderId, name, setName, collectorNumber, rarity, variant?, acquiredAt? }`; binder must exist and belong to caller (else 404); `201` + `Location` + `ETag` |
-| `GET /cards` | owner-scoped list (join binders on owner); filters: `filter.name/setName/rarity/variant/collectorNumber .eq/.ne/.contains/.in`, `filter.acquiredAt.eq/gte/lte`, `filter.binderId.eq/in`; sort whitelist: `name,setName,rarity,acquiredAt,createdAt,updatedAt`; pagination; ETag/304 |
-| `GET /cards/:id` | detail incl. owner check; embeds `gradingCertificate` (1:1) if present |
-| `PUT /cards/:id` | full replace; may move to another binder (must be owned); `If-Match` + version bump; 404/412 as above |
-| `POST /cards/:cardId/grading-certificate` | body `{ gradingCompany (≤20), certNumber (≤50), grade (1.0–10.0, 0.1 steps), gradedAt (date) }`; 409 if card already has a cert or cert_number taken; card must be owned; `201` + `Location: /cards/:cardId/grading-certificate` |
+| Endpoint                                  | Behavior                                                                                                                                                                                                                                                                            |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /health`                             | `{ status: "ok" }` — public, no auth                                                                                                                                                                                                                                                |
+| `POST /binders`                           | zod body `{ name (≤100), description? }`; stamps `owner_user_id = sub`; `201` + `Location: /binders/:id` + `ETag`                                                                                                                                                                   |
+| `GET /binders`                            | owner-scoped list; filters e.g. `filter.name.contains\|eq\|ne`, `filter.createdAt.gte\|lte`; `sort` whitelist: `name, createdAt, updatedAt`; paginated envelope + `ETag`; `If-None-Match` → 304                                                                                     |
+| `GET /binders/:id`                        | owner-scoped binder detail; cards are accessible via `/cards?filter.binderId.eq=:id`                                                                                                                                                                                                |
+| `PUT /binders/:id`                        | full replace `{ name, description? }`; requires `If-Match`; `UPDATE … WHERE id=? AND version=?` (`version+1`, `updated_at=now()`); 404 if missing, 412 on mismatch                                                                                                                  |
+| `POST /cards`                             | body `{ binderId, name, setName, collectorNumber, rarity, variant?, acquiredAt? }`; binder must exist and belong to caller (else 404); `201` + `Location` + `ETag`                                                                                                                  |
+| `GET /cards`                              | owner-scoped list (join binders on owner); filters: `filter.name/setName/rarity/variant/collectorNumber .eq/.ne/.contains/.in`, `filter.acquiredAt.eq/gte/lte`, `filter.binderId.eq/in`; sort whitelist: `name,setName,rarity,acquiredAt,createdAt,updatedAt`; pagination; ETag/304 |
+| `GET /cards/:id`                          | detail incl. owner check; embeds `gradingCertificate` (1:1) if present                                                                                                                                                                                                              |
+| `PUT /cards/:id`                          | full replace; may move to another binder (must be owned); `If-Match` + version bump; 404/412 as above                                                                                                                                                                               |
+| `GET /cards/:cardId/grading-certificate`  | fetch the owned card's certificate; supports conditional GET                                                                                                                                                                                                                        |
+| `POST /cards/:cardId/grading-certificate` | body `{ gradingCompany (≤20), certNumber (≤50), grade (1.0–10.0, 0.1 steps), gradedAt (date) }`; 409 if card already has a cert or cert_number taken; card must be owned; `201` + `Location: /cards/:cardId/grading-certificate`                                                    |
 
 Validation: zod everywhere (params, query, body). Grade: `z.number().min(1).max(10)` with 0.1-step check (via string regex or rounded-multiple validation).
 Dates as ISO `YYYY-MM-DD` strings validated by zod.
@@ -102,7 +103,7 @@ Dates as ISO `YYYY-MM-DD` strings validated by zod.
 ## 6. Auth details
 
 - Env: `KEYCLOAK_ISSUER=http://localhost:8080/realms/tcg-card-stack`, `KEYCLOAK_JWKS_URL` derived from it if unset.
-- Middleware: `Authorization: Bearer <jwt>` → `jose.jwtVerify` against remote JWKSet (cached), issuer + `RS256` enforced → parse `realm_access.roles`; 403 if `collector` missing; 401 on any verification failure.
+- Middleware: `Authorization: Bearer <jwt>` → `jose.jwtVerify` against remote JWKSet (cached), with issuer, `RS256`, expiration and `tcg-api` audience enforced → parse `realm_access.roles`; 403 if `collector` missing, 401 for invalid tokens and 503 when JWKS is unavailable. The realm export includes an audience mapper; existing realms need the mapper applied separately or a fresh import.
 - Attach `sub` to context for ownership checks.
 - Error responses are RFC 9457 problems (`401 unauthorized`, `403 forbidden`).
 
@@ -113,6 +114,7 @@ Dates as ISO `YYYY-MM-DD` strings validated by zod.
 ## 8. Database changes
 
 `init.sql`:
+
 - `binders`: add `updated_at TIMESTAMPTZ NOT NULL DEFAULT now()`
 - `cards`: add `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`, `updated_at TIMESTAMPTZ NOT NULL DEFAULT now()`
 - `grading_certificates`: add `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`, `updated_at TIMESTAMPTZ NOT NULL DEFAULT now()`
@@ -154,7 +156,7 @@ Apply with `docker compose down -v && docker compose up -d --wait` (recreates + 
 
 ## 13. Execution order
 
-**"Commit early, commit often"** — commit after *every working increment*, not just these milestones. Each item below is one or more small commits; nothing gets implemented in one big drop. If a step breaks the build, revert or fix before moving on — do not accumulate uncommitted work.
+**"Commit early, commit often"** — commit after _every working increment_, not just these milestones. Each item below is one or more small commits; nothing gets implemented in one big drop. If a step breaks the build, revert or fix before moving on — do not accumulate uncommitted work.
 
 1. `chore: add created_at/updated_at (schema + init.sql)` → recreate DB, verify Drizzle parity
 2. `feat: env validation, h2c server entrypoint, /health`
@@ -164,6 +166,7 @@ Apply with `docker compose down -v && docker compose up -d --wait` (recreates + 
 6. `feat: grading certificate endpoint`
 7. `test: vitest unit/stubbed-route tests`
 8. `docs: bruno collection, Makefile, README, .env.example`
+
 - Final: `pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm build` green; manual Bruno smoke; final commit
 
 ## 14. Risks / notes

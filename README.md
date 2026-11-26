@@ -1,6 +1,6 @@
 # TCG Card Stack backend
 
-A TypeScript/Hono API for trading card binders, cards, and grading certificates, using PostgreSQL, Drizzle ORM and Keycloak. Implementation is in progress; the API examples below describe the agreed interface and have not all been verified end to end. See `PLAN.md` for the implementation plan.
+A TypeScript/Hono API for trading card binders, cards, and grading certificates, using PostgreSQL, Drizzle ORM and Keycloak. See `PLAN.md` for the implementation plan.
 
 ## Local setup
 
@@ -40,7 +40,7 @@ There is no established Drizzle migration baseline or automatic migration. For a
 
 ## Authentication
 
-The local realm is `tcg-card-stack`, with public client `tcg-backend`, realm role `collector`, and seeded user `collector` / `collector`. The API is designed to verify Keycloak bearer tokens (issuer, signature and `tcg-api` audience), require the `collector` realm role, and restrict binders to the token subject; cards and certificates are scoped through their binder. `/health` is public. Seed binders belong to the exported collector user's fixed subject.
+The local realm is `tcg-card-stack`, with public client `tcg-backend`, realm role `collector`, and seeded user `collector` / `collector`. The API verifies Keycloak bearer tokens (issuer, signature and `tcg-api` audience), require the `collector` realm role, and restrict binders to the token subject; cards and certificates are scoped through their binder. `/health` is public. Seed binders belong to the exported collector user's fixed subject.
 
 For local demonstration only, request a token via Bruno's **Auth / Get Token**, or:
 
@@ -56,7 +56,7 @@ Pass the returned `access_token` as `Authorization: Bearer <token>`. Tokens expi
 
 Paths are at the root, without an `/api` prefix:
 
-| Endpoint                                                                            | Intended operation                    |
+| Endpoint                                                                            | Operation                             |
 | ----------------------------------------------------------------------------------- | ------------------------------------- |
 | `GET /health`                                                                       | Public health check                   |
 | `GET /binders`, `POST /binders`                                                     | List or create owned binders          |
@@ -65,9 +65,9 @@ Paths are at the root, without an `/api` prefix:
 | `GET /cards/:id`, `PUT /cards/:id`                                                  | Fetch or replace an owned card        |
 | `GET /cards/:cardId/grading-certificate`, `POST /cards/:cardId/grading-certificate` | Read or add its certificate           |
 
-POSTs are intended to return `201` and a `Location` header. Only one certificate is permitted per card and certificate numbers are unique; conflicts return 409. Request validation and errors use Problem Details (`application/problem+json`).
+POSTs return `201` and a `Location` header. Only one certificate is permitted per card and certificate numbers are unique; conflicts return 409. Request validation and errors use Problem Details (`application/problem+json`).
 
-GET responses support `ETag` and `If-None-Match` for conditional reads (304 when unchanged). PUT is a full replacement and requires the **current detail GET's** exact `ETag` in `If-Match`, including its quotes. Missing preconditions are rejected; a stale ETag should return 412. Rows have versions for optimistic locking. Fetch the detail again before another update, including after changes to related data; treat ETags as opaque rather than constructing them yourself.
+GET responses support `ETag` and `If-None-Match` for conditional reads (304 when unchanged). PUT is a full replacement and requires the **current detail GET's** exact `ETag` in `If-Match`, including its quotes. Missing preconditions return 428, wildcard preconditions are rejected, and a stale ETag returns 412. Rows have versions for optimistic locking. Fetch the detail again before another update, including after changes to related data; treat ETags as opaque rather than constructing them yourself.
 
 Lists use `page` (default 1), `pageSize` (default 20, maximum 100), and `sort` (comma-separated fields; `-` means descending), returning a `data` array and `meta` pagination information. Filters use `filter.<field>.<operator>=<value>`; operators include `eq`, `ne`, `in` (comma-separated), `contains` (case-insensitive), `gte`, and `lte`. Supported fields and operators vary by resource and are validated. Examples (quote URLs in a shell):
 
