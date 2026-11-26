@@ -22,10 +22,10 @@ export interface ListQuery {
 const positiveInteger = z.string().regex(/^[1-9]\d*$/).transform(Number).pipe(z.number().int().max(2147483647));
 const timestamp = z.iso.datetime({ offset: true });
 
-function valueFor(field: ListField, input: string): string | number {
+function valueFor(field: ListField, input: string): string | number | Date {
   if (field.type === "integer") return validate(positiveInteger, input);
   if (field.type === "date") return validate(dateSchema, input);
-  if (field.type === "timestamp") return validate(timestamp, input);
+  if (field.type === "timestamp") return new Date(validate(timestamp, input));
   return validate(z.string().min(1).max(1000), input);
 }
 
