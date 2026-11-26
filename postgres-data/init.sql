@@ -15,7 +15,8 @@ CREATE TABLE binders
     name          VARCHAR(100) NOT NULL,
     description   TEXT,
     owner_user_id TEXT NOT NULL, -- Keycloak user subject
-    created_at    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_at    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     -- optimistic locking counter, incremented on every successful change
     version       INT NOT NULL DEFAULT 1
 );
@@ -31,6 +32,8 @@ CREATE TABLE cards
     rarity           VARCHAR(50)  NOT NULL,
     variant          VARCHAR(50) DEFAULT 'Standard',
     acquired_at      DATE        DEFAULT CURRENT_DATE,
+    created_at       TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at       TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     -- optimistic locking counter, incremented on every successful change
     version          INT         NOT NULL DEFAULT 1
 );
@@ -44,7 +47,9 @@ CREATE TABLE grading_certificates
     grading_company VARCHAR(20)   NOT NULL,
     cert_number     VARCHAR(50)   NOT NULL UNIQUE,
     grade           NUMERIC(3, 1) NOT NULL CHECK (grade >= 1.0 AND grade <= 10.0),
-    graded_at       DATE          NOT NULL
+    graded_at       DATE          NOT NULL,
+    created_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 -- ==========================================

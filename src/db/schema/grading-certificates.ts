@@ -1,5 +1,14 @@
 import { sql } from "drizzle-orm";
-import { check, date, integer, numeric, pgTable, serial, varchar } from "drizzle-orm/pg-core";
+import {
+  check,
+  date,
+  integer,
+  numeric,
+  pgTable,
+  serial,
+  timestamp,
+  varchar,
+} from "drizzle-orm/pg-core";
 import { cards } from "./cards.js";
 
 export const gradingCertificates = pgTable(
@@ -16,6 +25,13 @@ export const gradingCertificates = pgTable(
       .unique("grading_certificates_cert_number_key"),
     grade: numeric("grade", { precision: 3, scale: 1 }).notNull(),
     gradedAt: date("graded_at").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .$onUpdate(() => new Date())
+      .notNull(),
   },
   (table) => [
     check(

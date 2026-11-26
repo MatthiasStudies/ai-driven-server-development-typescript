@@ -1,0 +1,38 @@
+meta {
+  name: Replace card (If-Match)
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{baseUrl}}/cards/{{cardId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{access_token}}
+  Content-Type: application/json
+  If-Match: {{cardEtag}}
+}
+
+body:json {
+  {
+    "binderId": {{binderId}},
+    "name": "Bruno sample card updated",
+    "setName": "Example Set",
+    "collectorNumber": "1/100",
+    "rarity": "Rare",
+    "variant": "Standard",
+    "acquiredAt": "2024-01-01"
+  }
+}
+
+script:post-response {
+  const etag = res.getHeader("etag");
+  if (res.getStatus() === 200 && etag) bru.setEnvVar("cardEtag", etag);
+}
+
+docs {
+  Full replacement; modifies data and may move the card to binderId. Fetch this card first and use an owned binder. Fetch again after success if no ETag is returned.
+}

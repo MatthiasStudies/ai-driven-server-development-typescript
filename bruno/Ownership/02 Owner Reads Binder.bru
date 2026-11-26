@@ -1,0 +1,19 @@
+meta {
+  name: Second collector reads own binder (200)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/binders/{{secondBinderId}}
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{secondCollectorToken}}
+}
+
+docs {
+  Run Create second collector binder first. The owner should receive 200.
+}

@@ -1,0 +1,19 @@
+meta {
+  name: Get grading certificate
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/cards/{{cardId}}/grading-certificate
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{access_token}}
+}
+
+docs {
+  Select an owned card with a certificate, or create one with the POST request. The initial seed card 3 does not have a certificate.
+}

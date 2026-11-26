@@ -1,0 +1,27 @@
+meta {
+  name: Missing If-Match
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{baseUrl}}/binders/{{binderId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{access_token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "Missing precondition",
+    "description": "Must not overwrite"
+  }
+}
+
+docs {
+  This deliberately omits the required If-Match header. The server should reject the update as a precondition error.
+}

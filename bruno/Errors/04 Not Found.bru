@@ -1,0 +1,19 @@
+meta {
+  name: Missing binder (404)
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/binders/2147483647
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{access_token}}
+}
+
+docs {
+  Expected: 404 for an ID that does not exist or is not owned by the caller. Run Get Token first.
+}

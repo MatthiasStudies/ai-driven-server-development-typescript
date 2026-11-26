@@ -1,0 +1,28 @@
+meta {
+  name: Get Token
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{keycloakUrl}}/realms/tcg-card-stack/protocol/openid-connect/token
+  body: formUrlEncoded
+  auth: none
+}
+
+body:form-urlencoded {
+  grant_type: password
+  client_id: tcg-backend
+  username: collector
+  password: collector
+}
+
+script:post-response {
+  if (res.getStatus() === 200 && res.getBody().access_token) {
+    bru.setEnvVar("access_token", res.getBody().access_token);
+  }
+}
+
+docs {
+  Development credentials only. Select the local environment before sending. A successful response stores the access token in that environment; repeat when it expires.
+}

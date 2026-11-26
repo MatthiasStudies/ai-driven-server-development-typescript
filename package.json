@@ -10,11 +10,18 @@
     "lint:fix": "oxlint --fix",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "dev": "tsx --env-file=.env --watch src/index.ts",
+    "start": "node --env-file=.env dist/index.js",
+    "test": "vitest run"
   },
   "dependencies": {
+    "@hono/node-server": "^2.1.11",
     "drizzle-orm": "^0.45.4",
-    "pg": "^8.23.1"
+    "hono": "^4.13.22",
+    "jose": "^6.2.18",
+    "pg": "^8.23.1",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
@@ -23,7 +30,8 @@
     "oxfmt": "^0.80.0",
     "oxlint": "^1.95.0",
     "tsx": "^4.23.15",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.2"
   },
   "engines": {
     "node": ">=24"

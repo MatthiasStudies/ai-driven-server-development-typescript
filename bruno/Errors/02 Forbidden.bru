@@ -1,0 +1,19 @@
+meta {
+  name: Missing collector role (403)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/binders
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{noRoleToken}}
+}
+
+docs {
+  Run Auth / Get noncollector token first. A missing, expired, invalid, or wrong-audience token returns 401 instead.
+}
