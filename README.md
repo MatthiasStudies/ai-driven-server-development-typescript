@@ -1,44 +1,96 @@
 # TCG Card Stack backend
 
-Project setup for a TypeScript/Node.js backend using PostgreSQL, Drizzle ORM and Keycloak. No HTTP server or authentication implementation has been added yet.
+A TypeScript/Hono API for trading card binders, cards, and grading certificates, using PostgreSQL, Drizzle ORM and Keycloak. Implementation is in progress; the API examples below describe the agreed interface and have not all been verified end to end. See `PLAN.md` for the implementation plan.
 
-## Requirements
+## Local setup
 
-- Node.js 24 or newer and pnpm (the pinned version is in `package.json`).
-- Docker and Docker Compose for the local services.
-
-## Setup
+Requirements: Node.js 24 or newer, the pnpm version pinned in `package.json`, Docker Compose, and optionally [Bruno](https://www.usebruno.com/) for HTTP requests.
 
 ```sh
-pnpm install
-cp .env.example .env
-docker compose up -d
+make install
+make env       # creates .env only if missing; never overwrites it
+make up        # start PostgreSQL and Keycloak
+make dev       # run API in watch mode
 ```
 
-The example `DATABASE_URL` connects to the local `tcg_tracker` database. Adjust it if your PostgreSQL host or credentials differ. The values in Compose and the realm export are **development-only** credentials and settings, not production configuration.
+Wait for Keycloak to finish starting before requesting a token. Adjust `.env` for your environment; the local defaults include:
 
-Drizzle Kit loads `.env` when it is present. The database client reads `DATABASE_URL` from the process environment; it does not automatically load `.env`. For a future Node entrypoint, use Node's `--env-file=.env` option or supply the variable through the environment. For example, to use a TypeScript script locally: `pnpm exec tsx --env-file=.env path/to/script.ts`.
+| Setting             | Default                                                       | Purpose                                 |
+| ------------------- | ------------------------------------------------------------- | --------------------------------------- |
+| `DATABASE_URL`      | `postgres://tcg_user:tcg_password@localhost:5432/tcg_tracker` | Application database                    |
+| `PORT`              | `3000`                                                        | HTTP/1.1 API, including Bruno           |
+| `HTTP2_PORT`        | `3001`                                                        | Cleartext HTTP/2 (h2c), prior knowledge |
+| `KEYCLOAK_ISSUER`   | `http://localhost:8080/realms/tcg-card-stack`                 | Token issuer                            |
+| `KEYCLOAK_AUDIENCE` | `tcg-api`                                                     | Required access-token audience          |
+| `KEYCLOAK_JWKS_URL` | issuer + `/protocol/openid-connect/certs`                     | Token signing keys; optional override   |
 
-## Commands
+PostgreSQL listens on `localhost:5432` and Keycloak on `localhost:8080`. Both API ports serve the same application. Use a client with h2c prior-knowledge support for port 3001, for example `curl --http2-prior-knowledge http://localhost:3001/health` (curl must be built with HTTP/2 support). Port 3001 is not an HTTP/1.1 fallback or an HTTP/1.1 upgrade endpoint.
 
-- `pnpm typecheck` — check TypeScript, including the Drizzle config.
-- `pnpm build` — compile `src` into `dist`.
-- `pnpm lint` / `pnpm lint:fix` — check / fix lint issues.
-- `pnpm format:check` / `pnpm format` — check / format project files.
-- `pnpm db:studio` — open Drizzle Studio using `DATABASE_URL`.
+**Development only:** the Compose credentials, seeded users, password grant, Keycloak development mode, and plain HTTP listeners are not secure production configuration. Tokens and passwords travel over unencrypted HTTP. Do not expose these services to untrusted networks or use these credentials in production.
 
-There is no `start` command until a backend entrypoint is implemented.
+### Existing volumes and realm imports
 
-## Database and identity
+`postgres-data/init.sql` initializes the application schema, seed data and the separate Keycloak database **only on first initialization** of the PostgreSQL data directory. Keycloak's startup import similarly skips an existing realm. Restarting containers or running `make up` does not update either existing database. In particular, older application databases can lack the current timestamp or ownership columns, and older realms can lack the `tcg-backend` client or the `tcg-api` access-token audience mapper.
 
-`postgres-data/init.sql` is the source of truth for a fresh application database, including seed data. `src/db/schema` mirrors its tables, constraints and relationships; `src/db/client.ts` exports the Drizzle client and PostgreSQL pool. When changing the schema, update both the SQL and Drizzle definitions and plan how to update existing databases. The `version` columns are only counters: implementing optimistic locking is the application's responsibility.
+For an existing `tcg-card-stack` realm, add the audience mapper to client `tcg-backend` manually (OIDC audience mapper, custom audience `tcg-api`, add to access token), or recreate the volume after backing up anything needed. The mapper in `keycloak/realm-export.json` only applies on fresh import. An existing `.env` is not replaced by `make env`; ensure its `KEYCLOAK_AUDIENCE` and ports match your intended configuration. Obtain a new token after changing the mapper.
 
-A binder's required `owner_user_id` stores its owner's Keycloak subject. The three seed binders belong to the fixed `collector` ID in `keycloak/realm-export.json`. Keycloak uses a separate database, so PostgreSQL cannot enforce this association as a foreign key. Future application code must validate the authenticated subject and enforce ownership; merely storing the subject does not implement authorization.
+**Destructive reset:** `make recreate-db` asks you to type `RESET`, then runs `docker compose down -v` and `docker compose up -d --wait`. This deletes the Compose PostgreSQL volume, including **both application data and the Keycloak database** (users, realm changes and other identity data), and initializes them afresh. Back up first; do not run it if any of that data must be retained. `make down` stops/removes containers without deleting volumes.
 
-Compose starts Keycloak at `http://localhost:8080`, with realm `tcg-card-stack`, public client `tcg-backend`, and realm role `collector`. The client retains the original public login and redirect settings; no backend token validation or confidential client is configured. The realm export's collector user and Compose's administrator account are for local development only.
+There is no established Drizzle migration baseline or automatic migration. For an existing database, arrange appropriate schema changes separately; generating an initial migration against an already initialized database would attempt to recreate existing tables. Keep `init.sql` and `src/db/schema/` aligned when changing the schema.
 
-### Existing databases and migrations
+## Authentication
 
-The PostgreSQL initialization script runs **only when the data directory is first initialized**. Similarly, Keycloak's startup import skips a realm that already exists. Recreating containers does not apply either file to persisted databases. Existing application databases may lack `owner_user_id`, and an existing realm may still have the old `tcg-frontend` client. Update those databases separately, or explicitly choose to recreate the data after backing it up. Do not remove Docker volumes unless their data can be discarded.
+The local realm is `tcg-card-stack`, with public client `tcg-backend`, realm role `collector`, and seeded user `collector` / `collector`. The API is designed to verify Keycloak bearer tokens (issuer, signature and `tcg-api` audience), require the `collector` realm role, and restrict binders to the token subject; cards and certificates are scoped through their binder. `/health` is public. Seed binders belong to the exported collector user's fixed subject.
 
-No Drizzle migration baseline has been established, and no migrations are applied automatically. Generating an initial migration would create the existing tables again; do not run it against a database already initialized by `init.sql`. Before adopting Drizzle migrations for existing databases, establish and document an appropriate baseline and migration workflow.
+For local demonstration only, request a token via Bruno's **Auth / Get Token**, or:
+
+```sh
+curl -sS -X POST 'http://localhost:8080/realms/tcg-card-stack/protocol/openid-connect/token' \
+  -d 'grant_type=password' -d 'client_id=tcg-backend' \
+  -d 'username=collector' -d 'password=collector'
+```
+
+Pass the returned `access_token` as `Authorization: Bearer <token>`. Tokens expire; request another when needed. A token without the required role should receive 403, while a missing, invalid, expired or wrong-audience token should receive 401.
+
+## API and concurrency
+
+Paths are at the root, without an `/api` prefix:
+
+| Endpoint                                                                            | Intended operation                    |
+| ----------------------------------------------------------------------------------- | ------------------------------------- |
+| `GET /health`                                                                       | Public health check                   |
+| `GET /binders`, `POST /binders`                                                     | List or create owned binders          |
+| `GET /binders/:id`, `PUT /binders/:id`                                              | Fetch or replace an owned binder      |
+| `GET /cards`, `POST /cards`                                                         | List or create cards in owned binders |
+| `GET /cards/:id`, `PUT /cards/:id`                                                  | Fetch or replace an owned card        |
+| `GET /cards/:cardId/grading-certificate`, `POST /cards/:cardId/grading-certificate` | Read or add its certificate           |
+
+POSTs are intended to return `201` and a `Location` header. Only one certificate is permitted per card and certificate numbers are unique; conflicts return 409. Request validation and errors use Problem Details (`application/problem+json`).
+
+GET responses support `ETag` and `If-None-Match` for conditional reads (304 when unchanged). PUT is a full replacement and requires the **current detail GET's** exact `ETag` in `If-Match`, including its quotes. Missing preconditions are rejected; a stale ETag should return 412. Rows have versions for optimistic locking. Fetch the detail again before another update, including after changes to related data; treat ETags as opaque rather than constructing them yourself.
+
+Lists use `page` (default 1), `pageSize` (default 20, maximum 100), and `sort` (comma-separated fields; `-` means descending), returning a `data` array and `meta` pagination information. Filters use `filter.<field>.<operator>=<value>`; operators include `eq`, `ne`, `in` (comma-separated), `contains` (case-insensitive), `gte`, and `lte`. Supported fields and operators vary by resource and are validated. Examples (quote URLs in a shell):
+
+```text
+/binders?page=1&pageSize=20&sort=-createdAt&filter.name.contains=Binder
+/cards?filter.rarity.in=Holo%20Rare,Ultra%20Rare&filter.acquiredAt.gte=2021-01-01
+/cards?filter.name.eq=Charizard&filter.acquiredAt.lte=2024-12-31
+```
+
+## Bruno walkthrough
+
+1. Open/import `bruno/` as a collection and select its `local` environment. The API base URL is HTTP/1.1 on port 3000; change it if `PORT` differs.
+2. Run **Health** and **Auth / Get Token**. The token request's post-response script stores `access_token` in the selected environment. Re-run it when the token expires.
+3. Use **Binders** and **Cards** to list, create and fetch resources. The environment starts with seeded `binderId=1` and `cardId=3`; creation requests capture IDs from `Location` when available. POST and PUT requests change persistent data.
+4. Run the detail GET for the current ID before the conditional GET or PUT; it captures the current ETag. After changing an ID or related data, fetch again. A stale update sample demonstrates 412. Certificate POST needs an ungraded owned card and a unique certificate number; repeating it demonstrates 409.
+5. **Errors** includes 400, 401, 404 and missing-precondition examples. To demonstrate 403, set `noRoleToken` to a valid token from this realm for a user without `collector`; no such user is seeded. Invalid or missing tokens demonstrate 401 instead.
+
+Bruno may persist scripted environment updates to `bruno/environments/local.bru`, including access tokens. Do not commit tokens or other secrets; clear/reset local environment changes before committing. Run requests individually rather than blindly running the whole collection, since examples create and modify data and some intentionally fail.
+
+## Commands and verification
+
+- `make dev` / `make build` / `make start` — develop, compile, and run the compiled server (build before start).
+- `make test` — run Vitest; tests use unit tests and/or stubbed dependencies, **not a live PostgreSQL database**. Bruno is intended for manual HTTP-level verification against running local services.
+- `make typecheck`, `make lint`, `make format-check`, `make format` — quality checks and formatting.
+- `make db-studio` — open Drizzle Studio using `.env` / `DATABASE_URL`.
+- `make help` — list shortcuts. The equivalent pnpm scripts are in `package.json`.
