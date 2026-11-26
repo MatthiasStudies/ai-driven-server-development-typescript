@@ -15,11 +15,12 @@ make dev
 
 Wait for Keycloak to finish starting, then open `bruno/` in Bruno and select the `local` environment. Run these requests in order:
 
-1. **Health (public)**, then **Auth / Get Token** and **Binders / List binders** to view the collection.
-2. **Auth / Get noncollector token**, then **Errors / Missing collector role (403)** to demonstrate role protection.
-3. **Auth / Get second collector token**, then **Ownership / Create second collector binder**. Run the two following ownership requests: the owner gets `200`, while the original collector gets `404`. The create request persists a binder.
+1. Run **Health (public)**, then **Auth / Get Token** to authenticate. Try **Binders / List binders** and **Cards / List and filter cards** to browse the seeded collection.
+2. Run **Binders / Create binder**, then **Cards / Create card** to add a card to it. Both return `201` and a `Location` header; Bruno saves their IDs for subsequent requests.
+3. Run **Certificates / Create grading certificate**, then **Cards / Get card and capture ETag** to see the card and its certificate. Use a unique `certNumber` if you repeat the demo.
+4. Run **Binders / Get binder and capture ETag**, then **Conditional GET binder** to see a `304` response. Try **Replace binder (If-Match)** to update it.
 
-For existing database volumes, see [Existing volumes and realm imports](#existing-volumes-and-realm-imports) if the demo users are missing. Keep tokens out of commits.
+These create and update requests persist data. For existing database volumes, see [Existing volumes and realm imports](#existing-volumes-and-realm-imports) if the demo user is missing. Keep tokens out of commits.
 
 ## Local setup
 
