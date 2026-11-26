@@ -7,6 +7,7 @@ const envSchema = z
     DATABASE_URL: z.string().min(1),
     KEYCLOAK_ISSUER: z.url().default("http://localhost:8080/realms/tcg-card-stack"),
     KEYCLOAK_JWKS_URL: z.url().optional(),
+    KEYCLOAK_AUDIENCE: z.string().min(1).default("tcg-api"),
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   })
   .refine((env) => env.PORT !== env.HTTP2_PORT, {

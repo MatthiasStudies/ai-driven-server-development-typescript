@@ -9,6 +9,7 @@ describe("environment configuration", () => {
 
     expect(env.PORT).toBe(3000);
     expect(env.HTTP2_PORT).toBe(3001);
+    expect(env.KEYCLOAK_AUDIENCE).toBe("tcg-api");
     expect(env.KEYCLOAK_JWKS_URL).toBe(
       "http://localhost:8080/realms/tcg-card-stack/protocol/openid-connect/certs",
     );

@@ -23,6 +23,19 @@
 			"standardFlowEnabled": true,
 			"directAccessGrantsEnabled": true,
 			"protocol": "openid-connect",
+			"protocolMappers": [
+				{
+					"name": "tcg-api-audience",
+					"protocol": "openid-connect",
+					"protocolMapper": "oidc-audience-mapper",
+					"consentRequired": false,
+					"config": {
+						"included.custom.audience": "tcg-api",
+						"access.token.claim": "true",
+						"id.token.claim": "false"
+					}
+				}
+			],
 			"rootUrl": "http://localhost:3000",
 			"baseUrl": "http://localhost:3000",
 			"redirectUris": [
