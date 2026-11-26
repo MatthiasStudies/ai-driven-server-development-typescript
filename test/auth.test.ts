@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { exportJWK, generateKeyPair, SignJWT } from "jose";
+import { CompactSign, exportJWK, generateKeyPair, SignJWT } from "jose";
 import type { JWTPayload } from "jose";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { createAuthMiddleware } from "../src/auth/keycloak.js";
@@ -97,6 +97,7 @@ describe("Keycloak authorization", () => {
       await token({ aud: "other-api" }),
       await token({ aud: undefined }),
       await token({ exp: Math.floor(Date.now() / 1000) - 1 }),
+      await token({ nbf: Math.floor(Date.now() / 1000) + 300 }),
       await token({ exp: undefined }),
       await token({ sub: undefined }),
       await token({ sub: "  " }),
@@ -106,6 +107,14 @@ describe("Keycloak authorization", () => {
       expect(response.status, `token ${tokens.indexOf(jwt)}`).toBe(401);
       expect(response.headers.get("www-authenticate")).toBe('Bearer error="invalid_token"');
     }
+  });
+
+  it("rejects a signed token with an infinite expiry", async () => {
+    const payload = `{"iss":"${issuer}","aud":"${audience}","sub":"user-123","exp":1e999,"realm_access":{"roles":["collector"]}}`;
+    const jwt = await new CompactSign(new TextEncoder().encode(payload))
+      .setProtectedHeader({ alg: "RS256", kid: "key-1" })
+      .sign(privateKey);
+    expect((await request(jwt)).status).toBe(401);
   });
 
   it("rejects algorithms other than RS256", async () => {
