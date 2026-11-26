@@ -32,7 +32,14 @@ PostgreSQL listens on `localhost:5432` and Keycloak on `localhost:8080`. Both AP
 
 `postgres-data/init.sql` initializes the application schema, seed data and the separate Keycloak database **only on first initialization** of the PostgreSQL data directory. Keycloak's startup import similarly skips an existing realm. Restarting containers or running `make up` does not update either existing database. In particular, older application databases can lack the current timestamp or ownership columns, and older realms can lack the `tcg-backend` client or the `tcg-api` access-token audience mapper.
 
-For an existing `tcg-card-stack` realm, add the audience mapper to client `tcg-backend` manually (OIDC audience mapper, custom audience `tcg-api`, add to access token), or recreate the volume after backing up anything needed. The mapper in `keycloak/realm-export.json` only applies on fresh import. An existing `.env` is not replaced by `make env`; ensure its `KEYCLOAK_AUDIENCE` and ports match your intended configuration. Obtain a new token after changing the mapper.
+For an existing `tcg-card-stack` realm, make these changes in the Keycloak Admin Console (`http://localhost:8080`, local bootstrap admin `admin` / `admin`) without deleting the volume:
+
+1. Select the `tcg-card-stack` realm. Ensure the `collector` realm role exists and the `tcg-backend` public OIDC client exists with direct access grants enabled.
+2. In `tcg-backend` client scopes, add an OIDC **Audience** protocol mapper to the client's dedicated scope: custom audience `tcg-api`, add to access token on. The mapper must apply to all users of this client, including users without `collector`.
+3. Under Users, create enabled users `collector2` and `noncollector` if absent. On each user's Credentials tab, set a non-temporary development password matching its username. Under Role mapping, assign the **realm** role `collector` to `collector2` only. Ensure `noncollector` does not inherit that role through a group or composite role. Do not change existing users or their IDs.
+4. Request fresh tokens using the Bruno Auth requests. If authentication fails, check required actions and credentials; if the noncollector request returns 401 instead of 403, check the token audience and expiry.
+
+The export specifies fixed IDs for new realms; console-created users in existing realms receive Keycloak-generated IDs. This is fine for the ownership walkthrough: newly created binders use the actual token subject. The original seeded binders require the original collector's subject; don't replace that user. An existing `.env` is not replaced by `make env`; ensure its `KEYCLOAK_AUDIENCE` and ports match your intended configuration.
 
 **Destructive reset:** `make recreate-db` asks you to type `RESET`, then runs `docker compose down -v` and `docker compose up -d --wait`. This deletes the Compose PostgreSQL volume, including **both application data and the Keycloak database** (users, realm changes and other identity data), and initializes them afresh. Back up first; do not run it if any of that data must be retained. `make down` stops/removes containers without deleting volumes.
 
@@ -40,7 +47,15 @@ There is no established Drizzle migration baseline or automatic migration. For a
 
 ## Authentication
 
-The local realm is `tcg-card-stack`, with public client `tcg-backend`, realm role `collector`, and seeded user `collector` / `collector`. The API verifies Keycloak bearer tokens (issuer, signature and `tcg-api` audience), require the `collector` realm role, and restrict binders to the token subject; cards and certificates are scoped through their binder. `/health` is public. Seed binders belong to the exported collector user's fixed subject.
+The local realm is `tcg-card-stack`, with public client `tcg-backend` and realm role `collector`. Fresh imports include these development-only users (password equals username):
+
+| User           | Realm role     | Exported subject                       |
+| -------------- | -------------- | -------------------------------------- |
+| `collector`    | `collector`    | `004dd70a-0aa1-4402-b1da-74e4311360f5` |
+| `collector2`   | `collector`    | `5a335eb8-7e17-42fd-8c95-148d53067d20` |
+| `noncollector` | no `collector` | `9f795fe5-14e7-4dbf-a6b5-bf35d290a564` |
+
+The API verifies Keycloak bearer tokens (issuer, signature and `tcg-api` audience), requires the `collector` realm role, and restricts binders to the token subject; cards and certificates are scoped through their binder. `/health` is public. Seed binders belong to the exported original collector's fixed subject.
 
 For local demonstration only, request a token via Bruno's **Auth / Get Token**, or:
 
@@ -83,7 +98,8 @@ Lists use `page` (default 1), `pageSize` (default 20, maximum 100), and `sort` (
 2. Run **Health** and **Auth / Get Token**. The token request's post-response script stores `access_token` in the selected environment. Re-run it when the token expires.
 3. Use **Binders** and **Cards** to list, create and fetch resources. The environment starts with seeded `binderId=1` and `cardId=3`; creation requests capture IDs from `Location` when available. POST and PUT requests change persistent data.
 4. Run the detail GET for the current ID before the conditional GET or PUT; it captures the current ETag. After changing an ID or related data, fetch again. A stale update sample demonstrates 412. Certificate POST needs an ungraded owned card and a unique certificate number; repeating it demonstrates 409.
-5. **Errors** includes 400, 401, 404 and missing-precondition examples. To demonstrate 403, set `noRoleToken` to a valid token from this realm for a user without `collector`; no such user is seeded. Invalid or missing tokens demonstrate 401 instead.
+5. Run **Auth / Get noncollector token**, then **Errors / Missing collector role**: the valid, audience-mapped token should receive 403. Invalid or missing tokens demonstrate 401 instead. Other error examples include 400, 404 and missing preconditions.
+6. Run **Auth / Get second collector token** and **Ownership / Create second collector binder** (this persists a new binder and captures `secondBinderId`). The following owner read should return 200; the original collector read of the same binder should return 404. Run **Auth / Get Token** first for the original collector, and refresh either token if expired. These requests keep their IDs and tokens separate from the main binder examples.
 
 Bruno may persist scripted environment updates to `bruno/environments/local.bru`, including access tokens. Do not commit tokens or other secrets; clear/reset local environment changes before committing. Run requests individually rather than blindly running the whole collection, since examples create and modify data and some intentionally fail.
 

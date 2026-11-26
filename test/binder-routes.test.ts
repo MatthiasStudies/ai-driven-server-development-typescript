@@ -12,7 +12,10 @@ const state = vi.hoisted(() => ({
 
 vi.mock("../src/repositories/binders.js", () => ({
   binderRepository: () => ({
-    list: async () => ({ data: state.item ? [state.item] : [], meta: {} }),
+    list: async (owner: string) => ({
+      data: state.item?.ownerUserId === owner ? [state.item] : [],
+      meta: {},
+    }),
     get: async (owner: string, id: number) =>
       state.item?.ownerUserId === owner && state.item.id === id ? { ...state.item } : undefined,
     create: async (owner: string, input: { name: string; description?: string | null }) => {
@@ -45,7 +48,7 @@ vi.mock("../src/repositories/binders.js", () => ({
 
 const app = new Hono<{ Variables: { subject: string } }>();
 app.use("*", async (c, next) => {
-  c.set("subject", "collector-1");
+  c.set("subject", c.req.header("x-test-subject") ?? "collector-1");
   await next();
 });
 app.route("/", createBinderRoutes({} as Database));
@@ -85,6 +88,30 @@ describe("binder routes with stub repository", () => {
     const stale = await update();
     expect(stale.status).toBe(412);
     expect(stale.headers.get("content-type")).toContain("application/problem+json");
+  });
+
+  it("scopes binder creation, listing, reads and updates to the subject", async () => {
+    const created = await app.request("/binders", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-test-subject": "collector-2" },
+      body: JSON.stringify({ name: "Second collector" }),
+    });
+    expect(created.status).toBe(201);
+    const tag = created.headers.get("etag")!;
+    const owner = { "x-test-subject": "collector-2" };
+    expect((await app.request("/binders/1", { headers: owner })).status).toBe(200);
+    expect((await app.request("/binders/1")).status).toBe(404);
+    const ownList = await app.request("/binders", { headers: owner });
+    const otherList = await app.request("/binders");
+    expect((await ownList.json()).data).toHaveLength(1);
+    expect((await otherList.json()).data).toHaveLength(0);
+    const update = await app.request("/binders/1", {
+      method: "PUT",
+      headers: { "content-type": "application/json", "if-match": tag },
+      body: JSON.stringify({ name: "Not mine", description: null }),
+    });
+    expect(update.status).toBe(404);
+    expect(state.item?.name).toBe("Second collector");
   });
 
   it("rejects invalid inputs and requests without a precondition", async () => {
