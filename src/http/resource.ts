@@ -25,12 +25,20 @@ export function noQuery(c: ResourceContext): void {
 export function requireIfMatch(c: ResourceContext): string {
   const value = c.req.header("If-Match");
   if (!value) throw new ProblemError(428, "Precondition Required", "If-Match is required");
+  if (value.trim() === "*")
+    throw badRequest("If-Match must contain a concrete strong ETag, not a wildcard");
   return value;
 }
 
-export function jsonResource(c: ResourceContext, value: unknown, status: ContentfulStatusCode = 200, conditional = false): Response {
+export function jsonResource(
+  c: ResourceContext,
+  value: unknown,
+  status: ContentfulStatusCode = 200,
+  conditional = false,
+): Response {
   const etag = representationEtag(value);
   c.header("ETag", etag);
+  c.header("Cache-Control", "private, no-cache");
   if (conditional && ifNoneMatch(c.req.header("If-None-Match"), etag)) return c.body(null, 304);
   return c.json(value, status);
 }

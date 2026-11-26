@@ -7,10 +7,13 @@ export const dateSchema = z.iso.date();
 export function validate<T>(schema: z.ZodType<T>, value: unknown): T {
   const result = schema.safeParse(value);
   if (!result.success) {
-    throw badRequest("Request validation failed", result.error.issues.map((issue) => ({
-      path: issue.path.map(String).join("."),
-      message: issue.message,
-    })));
+    throw badRequest(
+      "Request validation failed",
+      result.error.issues.map((issue) => ({
+        path: issue.path.map(String).join("."),
+        message: issue.message,
+      })),
+    );
   }
   return result.data;
 }

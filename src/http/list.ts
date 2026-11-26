@@ -19,7 +19,11 @@ export interface ListQuery {
   orderBy: SQL[];
 }
 
-const positiveInteger = z.string().regex(/^[1-9]\d*$/).transform(Number).pipe(z.number().int().max(2147483647));
+const positiveInteger = z
+  .string()
+  .regex(/^[1-9]\d*$/)
+  .transform(Number)
+  .pipe(z.number().int().max(2147483647));
 const timestamp = z.iso.datetime({ offset: true });
 
 function valueFor(field: ListField, input: string): string | number | Date {
@@ -29,7 +33,11 @@ function valueFor(field: ListField, input: string): string | number | Date {
   return validate(z.string().min(1).max(1000), input);
 }
 
-export function parseListQuery(params: URLSearchParams, fields: ListFields, tieBreaker: AnyPgColumn): ListQuery {
+export function parseListQuery(
+  params: URLSearchParams,
+  fields: ListFields,
+  tieBreaker: AnyPgColumn,
+): ListQuery {
   const seen = new Set<string>();
   let page = 1;
   let pageSize = 20;
@@ -47,29 +55,45 @@ export function parseListQuery(params: URLSearchParams, fields: ListFields, tieB
       const sorted = new Set<string>();
       for (const item of sortFields) {
         const name = item.startsWith("-") ? item.slice(1) : item;
-        const field = fields[name];
+        const field = Object.hasOwn(fields, name) ? fields[name] : undefined;
         if (!field?.sortable || sorted.has(name)) throw badRequest(`Invalid sort field: ${item}`);
         sorted.add(name);
         orderBy.push(item.startsWith("-") ? desc(field.column) : asc(field.column));
       }
     } else {
       const match = /^filter\.([A-Za-z][A-Za-z0-9]*)\.(eq|ne|in|contains|gte|lte)$/.exec(key);
-      const field = match?.[1] ? fields[match[1]] : undefined;
+      const field = match?.[1] && Object.hasOwn(fields, match[1]) ? fields[match[1]] : undefined;
       const op = match?.[2] as FilterOperator | undefined;
-      if (!field || !op || !field.operators.includes(op)) throw badRequest(`Invalid query parameter: ${key}`);
+      if (!field || !op || !field.operators.includes(op))
+        throw badRequest(`Invalid query parameter: ${key}`);
       const { column } = field;
       if (op === "in") {
         const parts = value.split(",");
         if (parts.length > 100) throw badRequest("An in filter may contain at most 100 values");
-        filters.push(inArray(column, parts.map((part) => valueFor(field, part))));
+        filters.push(
+          inArray(
+            column,
+            parts.map((part) => valueFor(field, part)),
+          ),
+        );
       } else {
         const parsed = valueFor(field, value);
         switch (op) {
-          case "eq": filters.push(eq(column, parsed)); break;
-          case "ne": filters.push(ne(column, parsed)); break;
-          case "gte": filters.push(gte(column, parsed)); break;
-          case "lte": filters.push(lte(column, parsed)); break;
-          case "contains": filters.push(ilike(column, `%${String(parsed).replace(/[\\%_]/g, "\\$&")}%`)); break;
+          case "eq":
+            filters.push(eq(column, parsed));
+            break;
+          case "ne":
+            filters.push(ne(column, parsed));
+            break;
+          case "gte":
+            filters.push(gte(column, parsed));
+            break;
+          case "lte":
+            filters.push(lte(column, parsed));
+            break;
+          case "contains":
+            filters.push(ilike(column, `%${String(parsed).replace(/[\\%_]/g, "\\$&")}%`));
+            break;
         }
       }
     }

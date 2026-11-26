@@ -29,7 +29,8 @@ export function createGradingCertificateRoutes(database: Database) {
       c.header("Location", `/cards/${cardId}/grading-certificate`);
       return jsonResource(c, item, 201);
     } catch (error) {
-      if (isCertificateConflict(error)) throw conflict("Card already has a certificate or certificate number is in use");
+      if (isCertificateConflict(error))
+        throw conflict("Card already has a certificate or certificate number is in use");
       throw error;
     }
   });

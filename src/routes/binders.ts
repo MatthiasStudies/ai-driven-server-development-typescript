@@ -1,7 +1,14 @@
 import { Hono } from "hono";
 import { ifMatch, representationEtag } from "../http/etag.js";
 import { notFound, preconditionFailed } from "../http/problem.js";
-import { jsonResource, noQuery, pathId, requireIfMatch, subject, type AuthenticatedEnv } from "../http/resource.js";
+import {
+  jsonResource,
+  noQuery,
+  pathId,
+  requireIfMatch,
+  subject,
+  type AuthenticatedEnv,
+} from "../http/resource.js";
 import { jsonBody, validate } from "../http/validate.js";
 import { binderRepository, type Database } from "../repositories/binders.js";
 import { createBinderSchema, replaceBinderSchema } from "../validation/resources.js";
@@ -40,7 +47,7 @@ export function createBinderRoutes(database: Database) {
     const current = await repository.get(owner, id);
     if (!current) throw notFound();
     if (!ifMatch(match, representationEtag(current))) throw preconditionFailed();
-    const item = await repository.replace(owner, id, match.trim() === "*" ? null : current.version, input);
+    const item = await repository.replace(owner, id, current.version, input);
     if (!item) {
       if (!(await repository.get(owner, id))) throw notFound();
       throw preconditionFailed();

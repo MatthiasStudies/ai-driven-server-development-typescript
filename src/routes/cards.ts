@@ -1,7 +1,14 @@
 import { Hono } from "hono";
 import { ifMatch, representationEtag } from "../http/etag.js";
 import { notFound, preconditionFailed } from "../http/problem.js";
-import { jsonResource, noQuery, pathId, requireIfMatch, subject, type AuthenticatedEnv } from "../http/resource.js";
+import {
+  jsonResource,
+  noQuery,
+  pathId,
+  requireIfMatch,
+  subject,
+  type AuthenticatedEnv,
+} from "../http/resource.js";
 import { jsonBody, validate } from "../http/validate.js";
 import type { Database } from "../repositories/binders.js";
 import { cardRepository } from "../repositories/cards.js";
@@ -41,12 +48,14 @@ export function createCardRoutes(database: Database) {
     const match = requireIfMatch(c);
     const current = await repository.get(owner, id);
     if (!current) throw notFound();
-    if (!(await repository.ownsBinder(owner, input.binderId))) throw notFound("The target binder was not found");
+    if (!(await repository.ownsBinder(owner, input.binderId)))
+      throw notFound("The target binder was not found");
     if (!ifMatch(match, representationEtag(current))) throw preconditionFailed();
-    const updated = await repository.replace(owner, id, match.trim() === "*" ? null : current.version, input);
+    const updated = await repository.replace(owner, id, current.version, input);
     if (!updated) {
       if (!(await repository.get(owner, id))) throw notFound();
-      if (!(await repository.ownsBinder(owner, input.binderId))) throw notFound("The target binder was not found");
+      if (!(await repository.ownsBinder(owner, input.binderId)))
+        throw notFound("The target binder was not found");
       throw preconditionFailed();
     }
     const item = await repository.get(owner, id);
